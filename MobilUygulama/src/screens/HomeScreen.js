@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Linking, Alert } from 'react-native';
+import { firebase } from '../firebase';
 
 const COINGECKO_API_URL = 'https://api.coingecko.com/api/v3';
 const CRYPTOPANIC_API_URL = 'https://cryptopanic.com/api/v1/posts/?auth_token=demo&currencies=BTC,ETH,SOL,BNB,DOGE';
 
-const HomeScreen = () => {
+const HomeScreen = ({ navigation }) => {
   const [marketData, setMarketData] = useState([]);
   const [loadingMarket, setLoadingMarket] = useState(true);
   const [marketError, setMarketError] = useState('');
@@ -115,10 +116,10 @@ const HomeScreen = () => {
 
       {/* Kayıt Ol / Giriş Yap Butonları */}
       <View style={styles.buttonRow}>
-        <TouchableOpacity style={styles.primaryButton}>
+        <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.navigate('Register')}>
           <Text style={styles.primaryButtonText}>Hemen Kaydol</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.secondaryButton}>
+        <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.navigate('Login')}>
           <Text style={styles.secondaryButtonText}>Giriş Yap</Text>
         </TouchableOpacity>
       </View>
@@ -149,6 +150,26 @@ const HomeScreen = () => {
           <Text style={styles.featureIcon}>📊</Text>
           <Text style={styles.featureTitle}>Detaylı Analizler</Text>
           <Text style={styles.featureDesc}>Teknik ve temel analizlerle kripto para birimlerinin geleceğini tahmin edin.</Text>
+          <TouchableOpacity
+            style={styles.analysisButton}
+            onPress={() => {
+              const user = firebase.auth().currentUser;
+              if (user) {
+                navigation.navigate('Analysis');
+              } else {
+                Alert.alert(
+                  'Giriş Gerekli',
+                  'Bu özelliği kullanmak için giriş yapmanız gerekmektedir.',
+                  [
+                    { text: 'Vazgeç', style: 'cancel' },
+                    { text: 'Giriş Yap', onPress: () => navigation.navigate('Login') },
+                  ]
+                );
+              }
+            }}
+          >
+            <Text style={styles.analysisButtonText}>Detaylı Analiz Yap</Text>
+          </TouchableOpacity>
         </View>
         <View style={styles.featureCard}>
           <Text style={styles.featureIcon}>📰</Text>
@@ -215,6 +236,8 @@ const styles = StyleSheet.create({
   newsSource: { color: '#b0b8d1', fontSize: 13, marginBottom: 2 },
   newsTime: { color: '#b0b8d1', fontSize: 12, marginBottom: 5 },
   newsReadMore: { color: '#ff9900', fontWeight: 'bold', fontSize: 13, marginTop: 5 },
+  analysisButton: { backgroundColor: '#168aff', padding: 10, borderRadius: 8, marginTop: 10 },
+  analysisButtonText: { color: '#fff', fontWeight: 'bold', textAlign: 'center' },
 });
 
 export default HomeScreen; 
