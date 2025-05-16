@@ -12,6 +12,17 @@ const HomeScreen = ({ navigation }) => {
   const [news, setNews] = useState([]);
   const [loadingNews, setLoadingNews] = useState(true);
 
+  // ✅ Kullanıcı giriş yaptıysa AnalysisScreen'e yönlendir
+  useEffect(() => {
+    const unsubscribe = firebase.auth().onAuthStateChanged((user) => {
+      if (user) {
+        navigation.replace('Analysis');
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   // Kripto fiyatları
   useEffect(() => {
     const fetchMarketData = async () => {
@@ -63,7 +74,6 @@ const HomeScreen = ({ navigation }) => {
           ]);
         }
       } catch (err) {
-        // Hata olursa da sahte haberler göster
         setNews([
           {
             title: "Bitcoin $63,000 Direncini Aşmaya Çalışıyor",
@@ -240,4 +250,4 @@ const styles = StyleSheet.create({
   analysisButtonText: { color: '#fff', fontWeight: 'bold', textAlign: 'center' },
 });
 
-export default HomeScreen; 
+export default HomeScreen;

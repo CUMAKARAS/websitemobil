@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { ScrollView, View, TextInput, Button, Text, StyleSheet, TouchableOpacity, Linking } from 'react-native';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../firebase';
+import { auth, db, firebase } from '../firebase';
 import Checkbox from 'expo-checkbox';
 
 const RegisterScreen = ({ navigation }) => {
@@ -17,7 +17,7 @@ const RegisterScreen = ({ navigation }) => {
   const [accepted, setAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const getFriendlyError = (code) => {
+  const getFriendlyError = (code, message) => {
     switch (code) {
       case 'auth/email-already-in-use':
         return 'Bu e-posta adresi zaten kullanımda.';
@@ -25,8 +25,10 @@ const RegisterScreen = ({ navigation }) => {
         return 'Geçerli bir e-posta adresi girin.';
       case 'auth/weak-password':
         return 'Şifreniz zayıf. Lütfen daha güçlü bir şifre belirleyin.';
+      case 'auth/network-request-failed':
+        return 'İnternet bağlantınızda sorun var.';
       default:
-        return 'Bir hata oluştu. Lütfen tekrar deneyin.';
+        return message || 'Bir hata oluştu. Lütfen tekrar deneyin.';
     }
   };
 
@@ -66,6 +68,13 @@ const RegisterScreen = ({ navigation }) => {
     setLoading(true);
     try {
       await createUserWithEmailAndPassword(auth, email.trim(), password);
+      const userId = auth.currentUser.uid;
+      await db.collection('users').doc(userId).set({
+        firstName,
+        lastName,
+        email,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
       setSuccess('Kayıt başarılı! Şimdi giriş yapabilirsiniz.');
       setFirstName('');
       setLastName('');
@@ -74,7 +83,8 @@ const RegisterScreen = ({ navigation }) => {
       setPasswordRepeat('');
       setAccepted(false);
     } catch (err) {
-      setError(getFriendlyError(err.code));
+      console.log('Kayıt Hatası:', err);
+      setError(getFriendlyError(err.code, err.message));
     } finally {
       setLoading(false);
     }

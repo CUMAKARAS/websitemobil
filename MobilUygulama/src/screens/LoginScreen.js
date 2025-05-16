@@ -23,8 +23,7 @@ const LoginScreen = ({ navigation }) => {
       if (userDoc.exists) {
         const data = userDoc.data();
         setUserData(data);
-        // İstersen burada navigation ile başka bir ekrana yönlendirebilirsin
-        // navigation.navigate('Home', { user: data });
+        navigation.replace('Analysis');
       }
     } catch (err) {
       setError('E-posta veya şifre hatalı.');

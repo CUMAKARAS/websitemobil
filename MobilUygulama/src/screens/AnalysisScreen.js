@@ -1,144 +1,212 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, ActivityIndicator } from 'react-native';
-import { firebase, db } from '../firebase';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch, Dimensions } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
+import { WebView } from 'react-native-webview';
+
+const coins = [
+  { label: 'Bitcoin (BTC)', value: 'BTC' },
+  { label: 'Ethereum (ETH)', value: 'ETH' },
+  { label: 'Solana (SOL)', value: 'SOL' },
+  { label: 'Binance Coin (BNB)', value: 'BNB' },
+  { label: 'Dogecoin (DOGE)', value: 'DOGE' },
+];
+const durations = [
+  { label: 'Son 7 Gün', value: '7' },
+  { label: 'Son 30 Gün', value: '30' },
+  { label: 'Son 90 Gün', value: '90' },
+];
+const candleTypes = [
+  { label: 'Günlük Mum', value: 'daily' },
+  { label: 'Saatlik Mum', value: 'hourly' },
+];
 
 const AnalysisScreen = () => {
-  const [userData, setUserData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [selectedCoin, setSelectedCoin] = useState('BTC');
+  const [selectedDuration, setSelectedDuration] = useState('30');
+  const [selectedCandle, setSelectedCandle] = useState('daily');
+  const [indicators, setIndicators] = useState({ ema5: true, ema10: true, ema25: false, ema50: false, bollinger: false });
+  const [chartHtml, setChartHtml] = useState('');
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      const user = firebase.auth().currentUser;
-      if (user) {
-        const userDoc = await db.collection('users').doc(user.uid).get();
-        if (userDoc.exists) {
-          setUserData(userDoc.data());
-        }
-      }
-      setLoading(false);
-    };
-    fetchUserData();
-  }, []);
+    updateChart();
+  }, [selectedCoin, selectedDuration, selectedCandle]);
 
-  const handleAnalysis = () => {
-    Alert.alert('Bilgi', 'Kripto Analiz Aracı yakında mobilde!');
+  const updateChart = () => {
+    const timeframe = selectedCandle === 'daily' ? 'D' : '60';
+    const symbol = selectedCoin + 'USD';
+    
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+          <style>
+            html, body, #tradingview_widget {
+              width: 100%;
+              height: 100%;
+              margin: 0;
+              padding: 0;
+              background: transparent;
+            }
+            body { overflow: hidden; }
+          </style>
+        </head>
+        <body>
+          <div id="tradingview_widget"></div>
+          <script type="text/javascript">
+            new TradingView.widget({
+              "width": "100%",
+              "height": "100%",
+              "symbol": "${symbol}",
+              "interval": "${timeframe}",
+              "timezone": "Etc/UTC",
+              "theme": "dark",
+              "style": "1",
+              "locale": "tr",
+              "toolbar_bg": "#23284d",
+              "enable_publishing": false,
+              "allow_symbol_change": true,
+              "container_id": "tradingview_widget",
+              "studies": [
+                "MASimple@tv-basicstudies",
+                "BB@tv-basicstudies"
+              ]
+            });
+          </script>
+        </body>
+      </html>
+    `;
+    setChartHtml(html);
   };
+
+  // Dummy data for cards
+  const currentPrice = '$102.657,05';
+  const change30d = '22.73%';
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.topRow}>
-        <Text style={styles.header}>Kripto Analiz Dashboard</Text>
-        {loading ? (
-          <ActivityIndicator color="#168aff" style={{ marginLeft: 16 }} />
-        ) : userData ? (
-          <View style={styles.userBox}>
-            <Text style={styles.userName}>{userData.firstName} {userData.lastName}</Text>
-            <Text style={styles.userEmail}>{userData.email}</Text>
+      <Text style={styles.header}>Kripto Para Analizi</Text>
+      <View style={styles.row}>
+        <View style={styles.col}>
+          <Text style={styles.label}>Kripto Para Seçin:</Text>
+          <View style={styles.selectBox}>
+            <Picker
+              selectedValue={selectedCoin}
+              style={styles.picker}
+              onValueChange={setSelectedCoin}
+              dropdownIconColor="#fff"
+            >
+              {coins.map((c) => <Picker.Item key={c.value} label={c.label} value={c.value} />)}
+            </Picker>
           </View>
-        ) : null}
-      </View>
-      <View style={styles.card}>
-        <Text style={styles.welcome}>Hoş geldiniz, {userData ? userData.firstName : ''} {userData ? userData.lastName : ''}</Text>
-        <Text style={styles.info}>Hesabınıza başarıyla giriş yaptınız!</Text>
-        <TouchableOpacity style={styles.button} onPress={handleAnalysis}>
-          <Text style={styles.buttonText}>Kripto Analiz Aracını Kullan</Text>
-        </TouchableOpacity>
-      </View>
-      {userData && (
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Hesap Bilgileriniz</Text>
-          <Text style={styles.profile}><Text style={styles.label}>Ad Soyad:</Text> {userData.firstName} {userData.lastName}</Text>
-          <Text style={styles.profile}><Text style={styles.label}>E-posta:</Text> {userData.email}</Text>
         </View>
-      )}
+        <View style={styles.col}>
+          <Text style={styles.label}>Analiz Süresi:</Text>
+          <View style={styles.selectBox}>
+            <Picker
+              selectedValue={selectedDuration}
+              style={styles.picker}
+              onValueChange={setSelectedDuration}
+              dropdownIconColor="#fff"
+            >
+              {durations.map((d) => <Picker.Item key={d.value} label={d.label} value={d.value} />)}
+            </Picker>
+          </View>
+        </View>
+        <View style={[styles.col, { maxWidth: 180 }]}> 
+          <Text style={styles.label}>Mum Tipi:</Text>
+          <View style={styles.selectBox}>
+            <Picker
+              selectedValue={selectedCandle}
+              style={styles.picker}
+              onValueChange={setSelectedCandle}
+              dropdownIconColor="#fff"
+            >
+              {candleTypes.map((c) => <Picker.Item key={c.value} label={c.label} value={c.value} />)}
+            </Picker>
+          </View>
+        </View>
+      </View>
+      <View style={styles.indicatorRow}>
+        <View style={styles.indicatorItem}>
+          <Switch value={indicators.ema5} onValueChange={v => setIndicators({ ...indicators, ema5: v })} />
+          <Text style={styles.indicatorLabel}>EMA 5</Text>
+        </View>
+        <View style={styles.indicatorItem}>
+          <Switch value={indicators.ema10} onValueChange={v => setIndicators({ ...indicators, ema10: v })} />
+          <Text style={styles.indicatorLabel}>EMA 10</Text>
+        </View>
+        <View style={styles.indicatorItem}>
+          <Switch value={indicators.ema25} onValueChange={v => setIndicators({ ...indicators, ema25: v })} />
+          <Text style={styles.indicatorLabel}>EMA 25</Text>
+        </View>
+        <View style={styles.indicatorItem}>
+          <Switch value={indicators.ema50} onValueChange={v => setIndicators({ ...indicators, ema50: v })} />
+          <Text style={styles.indicatorLabel}>EMA 50</Text>
+        </View>
+        <View style={styles.indicatorItem}>
+          <Switch value={indicators.bollinger} onValueChange={v => setIndicators({ ...indicators, bollinger: v })} />
+          <Text style={styles.indicatorLabel}>Bollinger Bandı</Text>
+        </View>
+      </View>
+      <View style={styles.chartBox}>
+        <WebView
+          source={{ html: chartHtml }}
+          style={{ width: '100%', height: '100%', backgroundColor: 'transparent' }}
+          scrollEnabled={false}
+          javaScriptEnabled={true}
+          domStorageEnabled={true}
+        />
+      </View>
+      <View style={styles.cardRow}>
+        <View style={styles.infoCard}>
+          <Text style={styles.cardLabel}>Güncel Fiyat</Text>
+          <Text style={styles.cardValue}>{currentPrice}</Text>
+        </View>
+        <View style={styles.infoCard}>
+          <Text style={styles.cardLabel}>30 Günlük Değişim</Text>
+          <Text style={[styles.cardValue, { color: '#2ee6b7' }]}>{change30d}</Text>
+        </View>
+      </View>
+      <TouchableOpacity style={styles.suggestButton}>
+        <Text style={styles.suggestButtonText}>Tavsiye Al</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    backgroundColor: '#181c2f',
-    flexGrow: 1,
-  },
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  header: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#168aff',
-    textAlign: 'left',
+  container: { flexGrow: 1, backgroundColor: '#181c2f', padding: 20 },
+  header: { fontSize: 36, fontWeight: 'bold', color: '#e6eaf3', textAlign: 'center', marginBottom: 30 },
+  row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap' },
+  col: { flex: 1, minWidth: 180, marginRight: 16 },
+  label: { color: '#e6eaf3', fontWeight: 'bold', fontSize: 20, marginBottom: 8 },
+  selectBox: { backgroundColor: '#23284d', borderRadius: 8, marginBottom: 8 },
+  picker: { color: '#fff', height: 48, width: '100%' },
+  indicatorRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap' },
+  indicatorItem: { flexDirection: 'row', alignItems: 'center', marginRight: 18 },
+  indicatorLabel: { color: '#b0b8d1', fontSize: 16, marginLeft: 4 },
+  webview: {
     flex: 1,
+    backgroundColor: 'transparent',
+    width: '100%',
+    height: '100%',
   },
-  userBox: {
+  chartBox: {
     backgroundColor: '#23284d',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    alignItems: 'flex-end',
-    minWidth: 120,
+    borderRadius: 12,
+    height: 400,
+    marginBottom: 30,
+    overflow: 'hidden',
+    width: '100%',
   },
-  userName: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  userEmail: {
-    color: '#b0b8d1',
-    fontSize: 13,
-  },
-  card: {
-    backgroundColor: '#23284d',
-    borderRadius: 10,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  welcome: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#168aff',
-  },
-  info: {
-    fontSize: 16,
-    marginBottom: 15,
-    color: '#fff',
-  },
-  button: {
-    backgroundColor: '#168aff',
-    paddingVertical: 12,
-    borderRadius: 6,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#168aff',
-  },
-  profile: {
-    fontSize: 16,
-    marginBottom: 6,
-    color: '#fff',
-  },
-  label: {
-    fontWeight: 'bold',
-    color: '#168aff',
-  },
+  cardRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 30 },
+  infoCard: { backgroundColor: '#23284d', borderRadius: 16, flex: 1, marginHorizontal: 8, padding: 24, alignItems: 'center', justifyContent: 'center' },
+  cardLabel: { color: '#b0b8d1', fontSize: 20, fontWeight: 'bold', marginBottom: 8 },
+  cardValue: { color: '#e6eaf3', fontSize: 32, fontWeight: 'bold' },
+  suggestButton: { backgroundColor: '#168aff', borderRadius: 10, paddingVertical: 16, paddingHorizontal: 32, alignSelf: 'center', marginTop: 10 },
+  suggestButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 20, textAlign: 'center' },
 });
 
 export default AnalysisScreen; 

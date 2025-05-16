@@ -18,6 +18,7 @@ if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
 }
 
+const auth = firebase.auth(); // EKLENDİ
 const db = firebase.firestore();
 
-export { firebase, db };
+export { firebase, db, auth }; // auth EKLENDİ
